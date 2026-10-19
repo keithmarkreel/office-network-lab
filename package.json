@@ -1,0 +1,12 @@
+{
+  "name": "office-floor-plan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
+  }
+}

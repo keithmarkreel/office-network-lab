@@ -1,0 +1,6 @@
+data/
+node_modules/
+.env
+.env.*
+npm-debug.log*
+*.old-layout.bak
