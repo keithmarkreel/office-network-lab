@@ -212,6 +212,20 @@ main{max-width:1600px;padding:0 20px 28px}
 .ssh-password-dialog p{margin:0 0 14px;color:var(--muted);font-size:.86rem}
 .ssh-password-dialog label{display:grid;gap:5px;color:var(--muted);font-size:.84rem}
 .ssh-password-dialog .row{margin-top:14px}
+.tour-dialog{width:min(560px,calc(100vw - 32px));padding:0;overflow:hidden}
+.tour-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.tour-header h2{margin:0;font-size:1rem}
+.tour-close{padding:5px 9px}
+.tour-content{min-height:190px;padding:22px 24px}
+.tour-eyebrow{margin:0 0 5px!important;color:var(--accent)!important;font-size:.75rem!important;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.tour-content h3{margin:0 0 10px;font-size:1.35rem;line-height:1.25}
+.tour-content p{color:var(--muted);font-size:.92rem;line-height:1.6}
+.tour-content ul{display:grid;gap:8px;margin:12px 0 0;padding-left:20px;color:var(--ink);font-size:.88rem}
+.tour-content li::marker{color:var(--accent)}
+.tour-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--line);background:var(--bg)}
+.tour-progress{color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
+.tour-footer-actions{display:flex;gap:8px}
+.tour-footer-actions button{min-width:86px}
 .ssh-scan-controls{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:8px;max-width:520px}
 .ssh-scan-controls button{white-space:nowrap}
 .ssh-scan-controls button:disabled,.scan-host-actions button:disabled{cursor:wait;opacity:.65}
@@ -287,6 +301,9 @@ main{max-width:1600px;padding:0 20px 28px}
   .bar{align-items:stretch}
   .tools button{flex:1}
   .ssh-scan-controls{grid-template-columns:1fr}
+  .tour-content{min-height:0;padding:18px}
+  .tour-footer{align-items:flex-start;flex-direction:column}
+  .tour-footer-actions{width:100%;justify-content:flex-end}
   .collection-toolbar{align-items:stretch;flex-direction:column}
   .collection-toolbar .list-count{align-self:flex-end}
   .collection-summary-action{font-size:0}
@@ -311,6 +328,7 @@ main{max-width:1600px;padding:0 20px 28px}
     </div>
     <div class="header-actions">
       <span class="save-state" id="save-state" data-state="loading" role="status" aria-live="polite">Connecting…</span>
+      <button id="open-tour" type="button">Quick tour</button>
       <button id="ip-visibility-toggle" type="button" aria-pressed="false">Hide IPs</button>
       <button id="theme-toggle" type="button" aria-label="Toggle color theme">Toggle theme</button>
     </div>
@@ -416,6 +434,24 @@ main{max-width:1600px;padding:0 20px 28px}
     </div>
   </form>
 </dialog>
+<dialog class="ssh-password-dialog tour-dialog" id="tour-dialog" aria-labelledby="tour-title" aria-describedby="tour-description">
+  <div class="tour-header">
+    <h2 id="tour-title">Flipside.AI Topology · Quick tour</h2>
+    <button class="tour-close" id="tour-close" type="button" aria-label="Close tour">Close</button>
+  </div>
+  <section class="tour-content" id="tour-content" aria-live="polite" aria-atomic="true">
+    <p class="tour-eyebrow" id="tour-step-label"></p>
+    <h3 id="tour-step-title"></h3>
+    <div id="tour-description"></div>
+  </section>
+  <footer class="tour-footer">
+    <span class="tour-progress" id="tour-progress"></span>
+    <div class="tour-footer-actions">
+      <button id="tour-previous" type="button">Back</button>
+      <button class="primary" id="tour-next" type="button">Next</button>
+    </div>
+  </footer>
+</dialog>
 <script>
 const uid=()=>Math.random().toString(36).slice(2,9);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -433,6 +469,38 @@ const saveStateEl=document.getElementById('save-state');
 const clipboardStatus=document.getElementById('clipboard-status');
 const ipVisibilityButton=document.getElementById('ip-visibility-toggle');
 let showIpAddresses=localStorage.getItem('office-plan-show-ips')!=='false';
+const tourDialog=document.getElementById('tour-dialog');
+const tourSteps=[
+  {
+    title:'Your office, mapped',
+    content:'<p>The canvas is a visual floor plan for placing network devices and seeing their names, IPs, and check results together.</p><ul><li>Drag items to arrange the office; click one to edit it in the side panel.</li><li>The legend explains PC types and connectivity status colors.</li><li>This is a Packet Tracer-style map, not a simulator: it does not create network links or route packets.</li></ul>'
+  },
+  {
+    title:'Build the floor plan',
+    content:'<p>Use the Add buttons above the map to place PCs, routers, desks, tables, and rooms.</p><ul><li>Drag an item to move it. Select it to resize supported shapes or adjust its angle.</li><li>Use the side panel to rename devices and enter IP addresses and PC details.</li><li>Changes are saved automatically to the server hosting this plan.</li></ul>'
+  },
+  {
+    title:'Check a PC',
+    content:'<p>Select a PC on the map or in Device addresses to see its controls.</p><ul><li><strong>Check connectivity</strong> sends one ping from the app host. No reply can mean the PC is offline or blocking ping.</li><li>SSH status and sample update/driver controls appear in the selected PC panel. Update and driver actions are demos; they do not change the PC.</li><li>Use Hide IPs for a cleaner view or before taking a screenshot. It only hides addresses on screen.</li></ul>'
+  },
+  {
+    title:'Copy a device',
+    content:'<p>Select an item and press <strong>Ctrl/Cmd+C</strong>, then <strong>Ctrl/Cmd+V</strong> to place a copy nearby.</p><ul><li>Copied PCs and routers have their IP cleared so they do not duplicate an address.</li><li>The Duplicate button in the selected item panel also makes a copy.</li><li>Use Delete in the panel or the Delete key to remove the selected item.</li></ul>'
+  },
+  {
+    title:'Find SSH hosts',
+    content:'<p>Enter a private network address range in Scan for SSH hosts, then choose <strong>Scan subnet</strong>.</p><ul><li>Scans support private IPv4 networks from /24 through /30 and use Nmap on the app host.</li><li>Expand Audit targets to search the results, see mapped PCs, or select devices.</li><li>A scan finds hosts with port 22 open; it does not confirm that a login will succeed.</li></ul>'
+  },
+  {
+    title:'Test SSH and collect audits',
+    content:'<p>Use <strong>Test SSH</strong> to check password login as <code>scanlog</code>. Select audit targets before collecting logs or running an optional ClamAV scan.</p><ul><li>Passwords are entered in one-time prompts and are not saved. SSH host keys are pinned.</li><li>Provisioning changes target PCs; review Setup instructions and confirm only systems you administer.</li><li>Audit collection and SSH login tests require a browser on the app host. Audit collection requires a Linux app host.</li></ul>'
+  },
+  {
+    title:'Share with your team',
+    content:'<p>Everyone connecting to the same host sees and edits the same floor plan. Each branch can run its own copy to keep its data separate.</p><ul><li>The app has no user accounts: anyone who can reach it can view and change the plan.</li><li>Keep it on a trusted private network; do not expose it to the public internet.</li><li>Hide IPs is only a display preference. It does not remove addresses from saved data or replace access controls.</li></ul>'
+  }
+];
+let currentTourStep=0;
 const deviceSearchInput=document.getElementById('device-search');
 const sshTargetSearchInput=document.getElementById('ssh-target-search');
 const sshScanInput=document.getElementById('ssh-scan-subnet');
@@ -1005,6 +1073,36 @@ async function loadPlan(){
   if(!data.initialized)save();
   else{savedRevision=revision;setSaveState('saved','All changes saved')}
 }
+
+function renderTourStep(){
+  const step=tourSteps[currentTourStep];
+  document.getElementById('tour-step-label').textContent=`Step ${currentTourStep+1}`;
+  document.getElementById('tour-step-title').textContent=step.title;
+  document.getElementById('tour-description').innerHTML=step.content;
+  document.getElementById('tour-progress').textContent=`${currentTourStep+1} of ${tourSteps.length}`;
+  document.getElementById('tour-previous').disabled=currentTourStep===0;
+  document.getElementById('tour-next').textContent=currentTourStep===tourSteps.length-1?'Done':'Next';
+}
+document.getElementById('open-tour').addEventListener('click',()=>{
+  currentTourStep=0;
+  renderTourStep();
+  tourDialog.showModal();
+  document.getElementById('tour-next').focus();
+});
+document.getElementById('tour-close').addEventListener('click',()=>tourDialog.close());
+document.getElementById('tour-previous').addEventListener('click',()=>{
+  if(currentTourStep===0)return;
+  currentTourStep--;
+  renderTourStep();
+  document.getElementById('tour-next').focus();
+});
+document.getElementById('tour-next').addEventListener('click',()=>{
+  if(currentTourStep===tourSteps.length-1){tourDialog.close();return}
+  currentTourStep++;
+  renderTourStep();
+  document.getElementById('tour-next').focus();
+});
+tourDialog.addEventListener('close',()=>document.getElementById('open-tour').focus());
 
 const savedTheme=localStorage.getItem('office-plan-theme');
 if(savedTheme==='dark'||savedTheme==='light')document.documentElement.dataset.theme=savedTheme;
