@@ -10,7 +10,7 @@ The app is a **Packet Tracer-style visual map**, not a network simulator: it hel
 
 1. Choose **Add PC**, **Add router**, **Add U-desk**, **Add table**, or **Add room**.
 2. Drag items into place on the canvas. Select an item to edit its name, IP address, and other details in the side panel.
-3. Device addresses and audit targets are expandable and searchable. Select a PC to see its status and controls. Use **Hide IPs** to hide addresses on screen; this does not change saved data.
+3. Device addresses and audit targets are expandable, searchable, and paginated at eight entries per page. Select a PC to see its status and controls. Use **Hide IPs** to hide addresses on screen; this does not change saved data.
 4. Changes are saved automatically. Copy the selected item with Ctrl/Cmd+C and paste with Ctrl/Cmd+V. Copies of PCs and routers have their IP cleared.
 
 ### Check connectivity and find SSH hosts
@@ -22,7 +22,7 @@ The app is a **Packet Tracer-style visual map**, not a network simulator: it hel
 ### Collect audits
 
 1. In **Audit targets**, select the PCs you are authorized to audit. Use **Select all targets** or **Clear selection** as needed.
-2. Choose **Collect logs** for inventory and audit reports, or **Collect + ClamAV scan** to include an optional read-only scan of target home folders.
+2. Choose **Collect logs** for inventory and audit reports, or **Collect + ClamAV scan** to include an optional read-only scan of target home folders. All selected PCs are processed simultaneously; large selections can increase network and host load.
 3. Enter the requested one-time `scanlog` sudo password. It is not saved. Use **Setup instructions** and **Provision selected PCs** if targets need the audit collector; provisioning makes persistent changes to those PCs and requires confirmation.
 4. Choose **Download tracking-sheet CSV** to export the current month's tracking-sheet rows.
 

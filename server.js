@@ -14,6 +14,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 const appDirectory = dirname(fileURLToPath(import.meta.url));
 const pagePath = join(appDirectory, 'Office floor plan.html');
+const stylesheetPath = join(appDirectory, 'styles.css');
 const dataDirectory = join(appDirectory, 'data');
 const dataPath = join(dataDirectory, 'office-plan.json');
 const sshHostKeysPath = join(dataDirectory, 'ssh-host-keys.json');
@@ -178,7 +179,7 @@ async function startAuditJob(mode, targets, logDays, scanDays, sudoPassword = ''
     SSH_USER: 'scanlog',
     DAYS: String(logDays),
     COLLECT_BROWSER: '0',
-    JOBS: '1',
+    JOBS: '0', // Run collection and optional ClamAV scans on all selected PCs concurrently.
     EXCLUDE_IPS: '',
     CLAM_SCAN: mode === 'scan' ? '1' : '0',
     SCAN_DAYS: String(scanDays),
@@ -883,6 +884,16 @@ const server = createServer(async (request, response) => {
         'Cache-Control': 'no-store'
       });
       response.end(html);
+      return;
+    }
+    if (url.pathname === '/styles.css' && request.method === 'GET') {
+      const stylesheet = await readFile(stylesheetPath);
+      response.writeHead(200, {
+        'Content-Type': 'text/css; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      response.end(stylesheet);
       return;
     }
     sendJson(response, 404, { error: 'Not found' });
